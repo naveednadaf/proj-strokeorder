@@ -193,7 +193,7 @@
     });
 
     function startLoop(writer, speed) {
-      const delayBetweenLoops = Math.round(500 / speed);
+      const delayBetweenLoops = Math.round(50 / speed);
       writer.loopCharacterAnimation({
         strokeAnimationSpeed: speed,
         delayBetweenLoops: delayBetweenLoops,
@@ -246,7 +246,7 @@
           padding: 5,
           showOutline: true,
           strokeAnimationSpeed: currentSpeed,
-          delayBetweenStrokes: 200,
+          delayBetweenStrokes: 100,
         });
         startLoop(newWriter, currentSpeed);
 
@@ -267,7 +267,7 @@
           padding: 5,
           showOutline: true,
           strokeAnimationSpeed: currentSpeed,
-          delayBetweenStrokes: 200,
+          delayBetweenStrokes: 100,
         });
         startLoop(newWriter, currentSpeed);
         
@@ -291,7 +291,7 @@
         padding: 5,
         showOutline: true,
         strokeAnimationSpeed: currentSpeed,
-        delayBetweenStrokes: 200,
+        delayBetweenStrokes: 100,
       });
       startLoop(writer, currentSpeed);
 
