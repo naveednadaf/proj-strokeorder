@@ -209,7 +209,7 @@
           padding: 5,
           showOutline: true,
           strokeAnimationSpeed: currentSpeed,
-          delayBetweenStrokes: 200,
+          delayBetweenStrokes: 100,
         });
         startLoop(newWriter, currentSpeed);
         
@@ -249,7 +249,7 @@
           delayBetweenStrokes: 200,
         });
         startLoop(newWriter, currentSpeed);
-        
+
         const idx = writers.findIndex(w => w.container === writerContainer);
         if (idx !== -1) {
           writers[idx] = { writer: newWriter, character, container: writerContainer };
