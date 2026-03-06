@@ -107,6 +107,10 @@
       height: 200px;
     }
 
+    .char-card .writer-container svg {
+      transition: none;
+    }
+
     .char-card .controls {
       margin-top: 15px;
       display: flex;
@@ -183,34 +187,24 @@
 
     let currentSpeed = 1;
     let writers = [];
-    let loopIntervals = [];
 
-    function startLoop(writer, speed) {
-      const loop = () => {
-        writer.animateCharacter({
-          strokeAnimationSpeed: speed,
-          onComplete: () => {
-            loopIntervals.push(setTimeout(() => loop(), 500));
-          }
+    function updateSpeedForWriter(writerData) {
+      const { writer, container } = writerData;
+      const svg = container.querySelector('svg');
+      if (svg) {
+        const strokes = svg.querySelectorAll('.stroke');
+        strokes.forEach(stroke => {
+          stroke.style.transition = `stroke-dashoffset ${1 / currentSpeed}s linear`;
         });
-      };
-      loop();
-    }
-
-    function clearAllLoops() {
-      loopIntervals.forEach(id => clearTimeout(id));
-      loopIntervals = [];
+      }
     }
 
     speedSlider.addEventListener('input', (e) => {
       currentSpeed = parseFloat(e.target.value);
       speedValue.textContent = currentSpeed + 'x';
 
-      // Clear existing loops and restart with new speed
-      clearAllLoops();
-      
-      writers.forEach(({ writer }) => {
-        startLoop(writer, currentSpeed);
+      writers.forEach(writerData => {
+        updateSpeedForWriter(writerData);
       });
     });
 
@@ -232,15 +226,16 @@
       const animateBtn = document.createElement('button');
       animateBtn.textContent = 'Animate';
       animateBtn.onclick = () => {
-        clearAllLoops();
-        startLoop(writerContainer.writer, currentSpeed);
+        writer.animateCharacter({
+          strokeAnimationSpeed: currentSpeed,
+          loop: true
+        });
       };
 
       const resetBtn = document.createElement('button');
       resetBtn.textContent = 'Reset';
       resetBtn.className = 'secondary';
       resetBtn.onclick = () => {
-        clearAllLoops();
         writerContainer.innerHTML = '';
         
         const newWriter = HanziWriter.create(writerContainer, character, {
@@ -252,9 +247,11 @@
           delayBetweenStrokes: 200,
         });
         
-        startLoop(newWriter, currentSpeed);
+        newWriter.animateCharacter({
+          strokeAnimationSpeed: currentSpeed,
+          loop: true
+        });
         
-        // Update writers array
         const writerIndex = writers.findIndex(w => w.container === writerContainer);
         if (writerIndex !== -1) {
           writers[writerIndex] = { writer: newWriter, character, container: writerContainer };
@@ -278,7 +275,10 @@
         delayBetweenStrokes: 200,
       });
       
-      startLoop(writer, currentSpeed);
+      writer.animateCharacter({
+        strokeAnimationSpeed: currentSpeed,
+        loop: true
+      });
 
       writerContainer.writer = writer;
       writers.push({ writer, character, container: writerContainer });
@@ -295,12 +295,10 @@
             <p>Enter Chinese characters above to see stroke animations</p>
           </div>
         `;
-        clearAllLoops();
         writers = [];
         return;
       }
 
-      // Filter to only Chinese characters
       const chineseChars = input.split('').filter(char => /[\u4e00-\u9fff]/.test(char));
 
       if (chineseChars.length === 0) {
@@ -309,13 +307,11 @@
             <p>No Chinese characters found. Please enter valid Chinese characters.</p>
           </div>
         `;
-        clearAllLoops();
         writers = [];
         return;
       }
 
       charsGrid.innerHTML = '';
-      clearAllLoops();
       writers = [];
 
       chineseChars.forEach((char, index) => {
