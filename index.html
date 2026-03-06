@@ -182,36 +182,10 @@
     const speedValue = document.getElementById('speedValue');
 
     let currentSpeed = 1;
-    let writers = [];
-    let loopTimers = [];
-
-    function clearAllTimers() {
-      loopTimers.forEach(timer => clearTimeout(timer));
-      loopTimers = [];
-    }
-
-    function startLoop(writer, speed, container) {
-      const duration = 3000 / speed;
-      
-      writer.animateCharacter({
-        strokeAnimationSpeed: speed,
-        delayBetweenStrokes: 200,
-      });
-      
-      const timer = setTimeout(() => startLoop(writer, speed, container), duration);
-      loopTimers.push(timer);
-      container._loopTimer = timer;
-    }
 
     speedSlider.addEventListener('input', (e) => {
       currentSpeed = parseFloat(e.target.value);
       speedValue.textContent = currentSpeed + 'x';
-      
-      clearAllTimers();
-      
-      writers.forEach(({ writer, container }) => {
-        startLoop(writer, currentSpeed, container);
-      });
     });
 
     function createCharCard(character, index) {
@@ -230,24 +204,17 @@
       controls.className = 'controls';
 
       const animateBtn = document.createElement('button');
-      animateBtn.textContent = 'Animate';
+      animateBtn.textContent = 'Replay';
       animateBtn.onclick = () => {
-        if (writerContainer._loopTimer) {
-          clearTimeout(writerContainer._loopTimer);
-        }
-        startLoop(writer, currentSpeed, writerContainer);
+        writer.animateCharacter();
       };
 
       const resetBtn = document.createElement('button');
       resetBtn.textContent = 'Reset';
       resetBtn.className = 'secondary';
       resetBtn.onclick = () => {
-        if (writerContainer._loopTimer) {
-          clearTimeout(writerContainer._loopTimer);
-        }
         writerContainer.innerHTML = '';
-        
-        const newWriter = HanziWriter.create(writerContainer, character, {
+        writer = HanziWriter.create(writerContainer, character, {
           width: 200,
           height: 200,
           padding: 5,
@@ -255,13 +222,7 @@
           strokeAnimationSpeed: currentSpeed,
           delayBetweenStrokes: 200,
         });
-        
-        startLoop(newWriter, currentSpeed, writerContainer);
-        
-        const writerIndex = writers.findIndex(w => w.container === writerContainer);
-        if (writerIndex !== -1) {
-          writers[writerIndex] = { writer: newWriter, character, container: writerContainer };
-        }
+        writer.animateCharacter();
       };
 
       controls.appendChild(animateBtn);
@@ -272,7 +233,7 @@
 
       charsGrid.appendChild(card);
 
-      const writer = HanziWriter.create(writerContainer, character, {
+      let writer = HanziWriter.create(writerContainer, character, {
         width: 200,
         height: 200,
         padding: 5,
@@ -280,11 +241,7 @@
         strokeAnimationSpeed: currentSpeed,
         delayBetweenStrokes: 200,
       });
-      
-      startLoop(writer, currentSpeed, writerContainer);
-
-      writerContainer.writer = writer;
-      writers.push({ writer, character, container: writerContainer });
+      writer.animateCharacter();
 
       return card;
     }
@@ -298,8 +255,6 @@
             <p>Enter Chinese characters above to see stroke animations</p>
           </div>
         `;
-        clearAllTimers();
-        writers = [];
         return;
       }
 
@@ -311,14 +266,10 @@
             <p>No Chinese characters found. Please enter valid Chinese characters.</p>
           </div>
         `;
-        clearAllTimers();
-        writers = [];
         return;
       }
 
       charsGrid.innerHTML = '';
-      clearAllTimers();
-      writers = [];
 
       chineseChars.forEach((char, index) => {
         const card = createCharCard(char, index);
