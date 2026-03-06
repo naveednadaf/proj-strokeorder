@@ -182,10 +182,24 @@
     const speedValue = document.getElementById('speedValue');
 
     let currentSpeed = 1;
+    let writers = [];
 
     speedSlider.addEventListener('input', (e) => {
       currentSpeed = parseFloat(e.target.value);
       speedValue.textContent = currentSpeed + 'x';
+
+      // Update speed for all existing writers
+      writers.forEach(({ writer, character }) => {
+        writer.animateCharacter({
+          strokeAnimationSpeed: currentSpeed,
+          onComplete: function() {
+            writer.animateCharacter({
+              strokeAnimationSpeed: currentSpeed,
+              onComplete: arguments.callee
+            });
+          }
+        });
+      });
     });
 
     function createCharCard(character, index) {
@@ -239,6 +253,12 @@
             });
           }
         });
+
+        // Update writers array
+        const writerIndex = writers.findIndex(w => w.writer === writerContainer.writer);
+        if (writerIndex !== -1) {
+          writers[writerIndex] = { writer: writerContainer.writer, character };
+        }
       };
       
       controls.appendChild(animateBtn);
@@ -268,36 +288,40 @@
       });
 
       writerContainer.writer = writer;
-      
+      writers.push({ writer, character });
+
       return card;
     }
 
     function generateCards() {
       const input = charInput.value.trim();
-      
+
       if (!input) {
         charsGrid.innerHTML = `
           <div class="empty-state">
             <p>Enter Chinese characters above to see stroke animations</p>
           </div>
         `;
+        writers = [];
         return;
       }
-      
+
       // Filter to only Chinese characters
       const chineseChars = input.split('').filter(char => /[\u4e00-\u9fff]/.test(char));
-      
+
       if (chineseChars.length === 0) {
         charsGrid.innerHTML = `
           <div class="empty-state">
             <p>No Chinese characters found. Please enter valid Chinese characters.</p>
           </div>
         `;
+        writers = [];
         return;
       }
-      
+
       charsGrid.innerHTML = '';
-      
+      writers = [];
+
       chineseChars.forEach((char, index) => {
         const card = createCharCard(char, index);
         charsGrid.appendChild(card);
