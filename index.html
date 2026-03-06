@@ -150,7 +150,7 @@
 <body>
   <div class="container">
     <h1>Chinese Character Stroke Animator</h1>
-    
+
     <div class="input-section">
       <input
         type="text"
@@ -183,60 +183,67 @@
 
     let currentSpeed = 1;
     let writers = [];
+    let loopIntervals = [];
+
+    function startLoop(writer, speed) {
+      const loop = () => {
+        writer.animateCharacter({
+          strokeAnimationSpeed: speed,
+          onComplete: () => {
+            loopIntervals.push(setTimeout(() => loop(), 500));
+          }
+        });
+      };
+      loop();
+    }
+
+    function clearAllLoops() {
+      loopIntervals.forEach(id => clearTimeout(id));
+      loopIntervals = [];
+    }
 
     speedSlider.addEventListener('input', (e) => {
       currentSpeed = parseFloat(e.target.value);
       speedValue.textContent = currentSpeed + 'x';
 
-      // Update speed for all existing writers
-      writers.forEach(({ writer, character }) => {
-        writer.animateCharacter({
-          strokeAnimationSpeed: currentSpeed,
-          onComplete: function() {
-            writer.animateCharacter({
-              strokeAnimationSpeed: currentSpeed,
-              onComplete: arguments.callee
-            });
-          }
-        });
+      // Clear existing loops and restart with new speed
+      clearAllLoops();
+      
+      writers.forEach(({ writer }) => {
+        startLoop(writer, currentSpeed);
       });
     });
 
     function createCharCard(character, index) {
       const card = document.createElement('div');
       card.className = 'char-card';
-      
+
       const charDisplay = document.createElement('div');
       charDisplay.className = 'character';
       charDisplay.textContent = character;
-      
+
       const writerContainer = document.createElement('div');
       writerContainer.className = 'writer-container';
       writerContainer.id = `char-${index}`;
-      
+
       const controls = document.createElement('div');
       controls.className = 'controls';
-      
+
       const animateBtn = document.createElement('button');
       animateBtn.textContent = 'Animate';
       animateBtn.onclick = () => {
-        writerContainer.writer.animateCharacter({
-          strokeAnimationSpeed: currentSpeed,
-          onComplete: function() {
-            writerContainer.writer.animateCharacter({
-              strokeAnimationSpeed: currentSpeed,
-              onComplete: arguments.callee
-            });
-          }
-        });
+        clearAllLoops();
+        startLoop(writerContainer.writer, currentSpeed);
       };
 
       const resetBtn = document.createElement('button');
       resetBtn.textContent = 'Reset';
       resetBtn.className = 'secondary';
       resetBtn.onclick = () => {
+        clearAllLoops();
         writerContainer.innerHTML = '';
-        writerContainer.writer = HanziWriter.create(writerContainer, character, {
+        
+        const newWriter = HanziWriter.create(writerContainer, character, {
           width: 200,
           height: 200,
           padding: 5,
@@ -244,23 +251,16 @@
           strokeAnimationSpeed: currentSpeed,
           delayBetweenStrokes: 200,
         });
-        writerContainer.writer.animateCharacter({
-          strokeAnimationSpeed: currentSpeed,
-          onComplete: function() {
-            writerContainer.writer.animateCharacter({
-              strokeAnimationSpeed: currentSpeed,
-              onComplete: arguments.callee
-            });
-          }
-        });
-
+        
+        startLoop(newWriter, currentSpeed);
+        
         // Update writers array
-        const writerIndex = writers.findIndex(w => w.writer === writerContainer.writer);
+        const writerIndex = writers.findIndex(w => w.container === writerContainer);
         if (writerIndex !== -1) {
-          writers[writerIndex] = { writer: writerContainer.writer, character };
+          writers[writerIndex] = { writer: newWriter, character, container: writerContainer };
         }
       };
-      
+
       controls.appendChild(animateBtn);
       controls.appendChild(resetBtn);
       card.appendChild(charDisplay);
@@ -277,18 +277,11 @@
         strokeAnimationSpeed: currentSpeed,
         delayBetweenStrokes: 200,
       });
-      writer.animateCharacter({
-        strokeAnimationSpeed: currentSpeed,
-        onComplete: function() {
-          writer.animateCharacter({
-            strokeAnimationSpeed: currentSpeed,
-            onComplete: arguments.callee
-          });
-        }
-      });
+      
+      startLoop(writer, currentSpeed);
 
       writerContainer.writer = writer;
-      writers.push({ writer, character });
+      writers.push({ writer, character, container: writerContainer });
 
       return card;
     }
@@ -302,6 +295,7 @@
             <p>Enter Chinese characters above to see stroke animations</p>
           </div>
         `;
+        clearAllLoops();
         writers = [];
         return;
       }
@@ -315,11 +309,13 @@
             <p>No Chinese characters found. Please enter valid Chinese characters.</p>
           </div>
         `;
+        clearAllLoops();
         writers = [];
         return;
       }
 
       charsGrid.innerHTML = '';
+      clearAllLoops();
       writers = [];
 
       chineseChars.forEach((char, index) => {
@@ -329,7 +325,7 @@
     }
 
     generateBtn.addEventListener('click', generateCards);
-    
+
     charInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         generateCards();
