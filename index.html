@@ -177,7 +177,13 @@
       const animateBtn = document.createElement('button');
       animateBtn.textContent = 'Animate';
       animateBtn.onclick = () => {
-        writerContainer.writer.animateCharacter();
+        writerContainer.writer.animateCharacter({
+          onComplete: function() {
+            writerContainer.writer.animateCharacter({
+              onComplete: arguments.callee
+            });
+          }
+        });
       };
 
       const resetBtn = document.createElement('button');
@@ -192,9 +198,14 @@
           showOutline: true,
           strokeAnimationSpeed: 1,
           delayBetweenStrokes: 200,
-          loop: true,
         });
-        writerContainer.writer.animateCharacter();
+        writerContainer.writer.animateCharacter({
+          onComplete: function() {
+            writerContainer.writer.animateCharacter({
+              onComplete: arguments.callee
+            });
+          }
+        });
       };
       
       controls.appendChild(animateBtn);
@@ -212,9 +223,14 @@
         showOutline: true,
         strokeAnimationSpeed: 1,
         delayBetweenStrokes: 200,
-        loop: true,
       });
-      writer.animateCharacter();
+      writer.animateCharacter({
+        onComplete: function() {
+          writer.animateCharacter({
+            onComplete: arguments.callee
+          });
+        }
+      });
 
       writerContainer.writer = writer;
       
