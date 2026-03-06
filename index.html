@@ -193,10 +193,9 @@
     });
 
     function startLoop(writer, speed) {
-      const delayBetweenLoops = Math.round(50 / speed);
       writer.loopCharacterAnimation({
         strokeAnimationSpeed: speed,
-        delayBetweenLoops: delayBetweenLoops,
+        delayBetweenLoops: 0,
       });
     }
 
