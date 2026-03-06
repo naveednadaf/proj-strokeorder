@@ -34,6 +34,21 @@
       gap: 10px;
       margin-bottom: 30px;
       justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #555;
+      font-size: 14px;
+    }
+
+    #speedSlider {
+      width: 120px;
+      cursor: pointer;
     }
 
     #charInput {
@@ -137,13 +152,18 @@
     <h1>Chinese Character Stroke Animator</h1>
     
     <div class="input-section">
-      <input 
-        type="text" 
-        id="charInput" 
+      <input
+        type="text"
+        id="charInput"
         placeholder="Enter Chinese characters (e.g., 你好世界)"
         autocomplete="off"
       >
       <button id="generateBtn">Generate</button>
+      <div class="speed-control">
+        <label for="speedSlider">Speed:</label>
+        <input type="range" id="speedSlider" min="0.5" max="3" step="0.5" value="1">
+        <span id="speedValue">1x</span>
+      </div>
     </div>
 
     <div id="charsGrid" class="chars-grid">
@@ -158,6 +178,15 @@
     const charInput = document.getElementById('charInput');
     const generateBtn = document.getElementById('generateBtn');
     const charsGrid = document.getElementById('charsGrid');
+    const speedSlider = document.getElementById('speedSlider');
+    const speedValue = document.getElementById('speedValue');
+
+    let currentSpeed = 1;
+
+    speedSlider.addEventListener('input', (e) => {
+      currentSpeed = parseFloat(e.target.value);
+      speedValue.textContent = currentSpeed + 'x';
+    });
 
     function createCharCard(character, index) {
       const card = document.createElement('div');
@@ -178,8 +207,10 @@
       animateBtn.textContent = 'Animate';
       animateBtn.onclick = () => {
         writerContainer.writer.animateCharacter({
+          strokeAnimationSpeed: currentSpeed,
           onComplete: function() {
             writerContainer.writer.animateCharacter({
+              strokeAnimationSpeed: currentSpeed,
               onComplete: arguments.callee
             });
           }
@@ -196,12 +227,14 @@
           height: 200,
           padding: 5,
           showOutline: true,
-          strokeAnimationSpeed: 1,
+          strokeAnimationSpeed: currentSpeed,
           delayBetweenStrokes: 200,
         });
         writerContainer.writer.animateCharacter({
+          strokeAnimationSpeed: currentSpeed,
           onComplete: function() {
             writerContainer.writer.animateCharacter({
+              strokeAnimationSpeed: currentSpeed,
               onComplete: arguments.callee
             });
           }
@@ -221,12 +254,14 @@
         height: 200,
         padding: 5,
         showOutline: true,
-        strokeAnimationSpeed: 1,
+        strokeAnimationSpeed: currentSpeed,
         delayBetweenStrokes: 200,
       });
       writer.animateCharacter({
+        strokeAnimationSpeed: currentSpeed,
         onComplete: function() {
           writer.animateCharacter({
+            strokeAnimationSpeed: currentSpeed,
             onComplete: arguments.callee
           });
         }
