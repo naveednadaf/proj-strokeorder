@@ -99,7 +99,24 @@
     .char-card .character {
       font-size: 32px;
       color: #333;
+      margin-bottom: 8px;
+    }
+
+    .char-card .pinyin {
+      font-size: 14px;
+      color: #4a90d9;
+      font-weight: 600;
+      margin-bottom: 4px;
+      min-height: 18px;
+    }
+
+    .char-card .meaning {
+      font-size: 13px;
+      color: #666;
+      text-align: center;
       margin-bottom: 10px;
+      min-height: 32px;
+      line-height: 1.4;
     }
 
     .char-card .writer-container {
@@ -145,6 +162,11 @@
     .empty-state p {
       font-size: 18px;
     }
+
+    .loading {
+      color: #999;
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
@@ -187,8 +209,6 @@
     speedSlider.addEventListener('input', (e) => {
       currentSpeed = parseFloat(e.target.value);
       speedValue.textContent = currentSpeed + 'x';
-      
-      // Restart all animations with new speed
       restartAllAnimations();
     });
 
@@ -208,16 +228,34 @@
           padding: 5,
           showOutline: true,
           strokeAnimationSpeed: currentSpeed,
-          delayBetweenStrokes: 100,
+          delayBetweenStrokes: 200,
         });
         startLoop(newWriter, currentSpeed);
         
-        // Update the writer reference
         const idx = writers.findIndex(w => w.container === container);
         if (idx !== -1) {
           writers[idx] = { writer: newWriter, character, container };
         }
       });
+    }
+
+    async function fetchCharInfo(character) {
+      try {
+        const response = await fetch(`http://ccdb.hemiola.com/characters/string/${character}?fields=kMandarin,kDefinition`);
+        const data = await response.json();
+        
+        if (data && data.length > 0) {
+          const charData = data[0];
+          return {
+            pinyin: charData.kMandarin || '',
+            meaning: charData.kDefinition || ''
+          };
+        }
+        return { pinyin: '', meaning: '' };
+      } catch (error) {
+        console.error('Error fetching character info:', error);
+        return { pinyin: '', meaning: '' };
+      }
     }
 
     function createCharCard(character, index) {
@@ -227,6 +265,14 @@
       const charDisplay = document.createElement('div');
       charDisplay.className = 'character';
       charDisplay.textContent = character;
+
+      const pinyinEl = document.createElement('div');
+      pinyinEl.className = 'pinyin';
+      pinyinEl.textContent = 'Loading...';
+
+      const meaningEl = document.createElement('div');
+      meaningEl.className = 'meaning';
+      meaningEl.textContent = '';
 
       const writerContainer = document.createElement('div');
       writerContainer.className = 'writer-container';
@@ -245,10 +291,10 @@
           padding: 5,
           showOutline: true,
           strokeAnimationSpeed: currentSpeed,
-          delayBetweenStrokes: 100,
+          delayBetweenStrokes: 200,
         });
         startLoop(newWriter, currentSpeed);
-
+        
         const idx = writers.findIndex(w => w.container === writerContainer);
         if (idx !== -1) {
           writers[idx] = { writer: newWriter, character, container: writerContainer };
@@ -266,7 +312,7 @@
           padding: 5,
           showOutline: true,
           strokeAnimationSpeed: currentSpeed,
-          delayBetweenStrokes: 100,
+          delayBetweenStrokes: 200,
         });
         startLoop(newWriter, currentSpeed);
         
@@ -279,10 +325,18 @@
       controls.appendChild(animateBtn);
       controls.appendChild(resetBtn);
       card.appendChild(charDisplay);
+      card.appendChild(pinyinEl);
+      card.appendChild(meaningEl);
       card.appendChild(writerContainer);
       card.appendChild(controls);
 
       charsGrid.appendChild(card);
+
+      // Fetch character info
+      fetchCharInfo(character).then(info => {
+        pinyinEl.textContent = info.pinyin || '';
+        meaningEl.textContent = info.meaning || '';
+      });
 
       const writer = HanziWriter.create(writerContainer, character, {
         width: 200,
@@ -290,7 +344,7 @@
         padding: 5,
         showOutline: true,
         strokeAnimationSpeed: currentSpeed,
-        delayBetweenStrokes: 100,
+        delayBetweenStrokes: 200,
       });
       startLoop(writer, currentSpeed);
 
