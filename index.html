@@ -130,6 +130,32 @@
       gap: 8px;
     }
 
+    .char-card .dictionary-info {
+      margin-top: 10px;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      width: 100%;
+      display: none;
+    }
+
+    .char-card .dictionary-info.show {
+      display: block;
+    }
+
+    .char-card .dictionary-info .dict-pinyin {
+      font-size: 14px;
+      color: #4a90d9;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .char-card .dictionary-info .dict-meaning {
+      font-size: 13px;
+      color: #555;
+      line-height: 1.5;
+    }
+
     .char-card button {
       padding: 8px 16px;
       font-size: 14px;
@@ -161,11 +187,6 @@
 
     .empty-state p {
       font-size: 18px;
-    }
-
-    .loading {
-      color: #999;
-      font-size: 12px;
     }
   </style>
 </head>
@@ -205,6 +226,71 @@
 
     let currentSpeed = 1;
     let writers = [];
+    let cedictData = {};
+
+    // Convert pinyin with tone numbers to proper tone marks
+    function convertPinyin(pinyin) {
+      const toneMarks = {
+        'a': ['ā', 'á', 'ǎ', 'à'],
+        'e': ['ē', 'é', 'ě', 'è'],
+        'i': ['ī', 'í', 'ǐ', 'ì'],
+        'o': ['ō', 'ó', 'ǒ', 'ò'],
+        'u': ['ū', 'ú', 'ǔ', 'ù'],
+        'ü': ['ǖ', 'ǘ', 'ǚ', 'ǜ'],
+        'v': ['ǖ', 'ǘ', 'ǚ', 'ǜ']
+      };
+
+      return pinyin.replace(/([aeiouv])([1-4])/gi, (match, vowel, tone) => {
+        const vowelLower = vowel.toLowerCase();
+        const toneIndex = parseInt(tone) - 1;
+        if (toneMarks[vowelLower] && toneMarks[vowelLower][toneIndex]) {
+          return toneMarks[vowelLower][toneIndex];
+        }
+        return match;
+      }).replace(/([aeiouv])5/gi, '$1');
+    }
+
+    // Parse CC-CEDICT dictionary
+    async function loadCedict() {
+      try {
+        const response = await fetch('cedict_ts.u8');
+        const text = await response.text();
+        const lines = text.split(/\r?\n/);
+        let entryCount = 0;
+
+        for (const line of lines) {
+          if (line.startsWith('#') || line.trim() === '' || line.startsWith('%')) continue;
+
+          const match = line.match(/^(\S+)\s+(\S+)\s+\[([^\]]+)\]\s+\/(.+)$/);
+          if (match) {
+            const [, traditional, simplified, pinyin, definitions] = match;
+            const defs = definitions.split('/').filter(d => d.trim());
+
+            if (traditional.length === 1) {
+              if (!cedictData[traditional]) {
+                cedictData[traditional] = { pinyin, definitions: [] };
+                entryCount++;
+              }
+              cedictData[traditional].definitions = [...cedictData[traditional].definitions, ...defs];
+            }
+            if (simplified && simplified !== traditional && simplified.length === 1) {
+              if (!cedictData[simplified]) {
+                cedictData[simplified] = { pinyin, definitions: [] };
+                entryCount++;
+              }
+              cedictData[simplified].definitions = [...cedictData[simplified].definitions, ...defs];
+            }
+          }
+        }
+        console.log('CC-CEDICT loaded with', entryCount, 'single-character entries');
+      } catch (error) {
+        console.error('Error loading CC-CEDICT:', error);
+      }
+    }
+
+    function lookupChar(character) {
+      return cedictData[character] || null;
+    }
 
     speedSlider.addEventListener('input', (e) => {
       currentSpeed = parseFloat(e.target.value);
@@ -231,31 +317,12 @@
           delayBetweenStrokes: 200,
         });
         startLoop(newWriter, currentSpeed);
-        
+
         const idx = writers.findIndex(w => w.container === container);
         if (idx !== -1) {
           writers[idx] = { writer: newWriter, character, container };
         }
       });
-    }
-
-    async function fetchCharInfo(character) {
-      try {
-        const response = await fetch(`http://ccdb.hemiola.com/characters/string/${character}?fields=kMandarin,kDefinition`);
-        const data = await response.json();
-        
-        if (data && data.length > 0) {
-          const charData = data[0];
-          return {
-            pinyin: charData.kMandarin || '',
-            meaning: charData.kDefinition || ''
-          };
-        }
-        return { pinyin: '', meaning: '' };
-      } catch (error) {
-        console.error('Error fetching character info:', error);
-        return { pinyin: '', meaning: '' };
-      }
     }
 
     function createCharCard(character, index) {
@@ -268,7 +335,7 @@
 
       const pinyinEl = document.createElement('div');
       pinyinEl.className = 'pinyin';
-      pinyinEl.textContent = 'Loading...';
+      pinyinEl.textContent = '';
 
       const meaningEl = document.createElement('div');
       meaningEl.className = 'meaning';
@@ -281,23 +348,12 @@
       const controls = document.createElement('div');
       controls.className = 'controls';
 
-      const animateBtn = document.createElement('button');
-      animateBtn.textContent = 'Replay';
-      animateBtn.onclick = () => {
-        writerContainer.innerHTML = '';
-        const newWriter = HanziWriter.create(writerContainer, character, {
-          width: 200,
-          height: 200,
-          padding: 5,
-          showOutline: true,
-          strokeAnimationSpeed: currentSpeed,
-          delayBetweenStrokes: 200,
-        });
-        startLoop(newWriter, currentSpeed);
-        
-        const idx = writers.findIndex(w => w.container === writerContainer);
-        if (idx !== -1) {
-          writers[idx] = { writer: newWriter, character, container: writerContainer };
+      const dictBtn = document.createElement('button');
+      dictBtn.textContent = 'Eng + Pinyin';
+      dictBtn.onclick = () => {
+        const dictInfo = card.querySelector('.dictionary-info');
+        if (dictInfo) {
+          dictInfo.classList.toggle('show');
         }
       };
 
@@ -315,28 +371,49 @@
           delayBetweenStrokes: 200,
         });
         startLoop(newWriter, currentSpeed);
-        
+
         const idx = writers.findIndex(w => w.container === writerContainer);
         if (idx !== -1) {
           writers[idx] = { writer: newWriter, character, container: writerContainer };
         }
       };
 
-      controls.appendChild(animateBtn);
+      controls.appendChild(dictBtn);
       controls.appendChild(resetBtn);
+
+      const dictionaryInfo = document.createElement('div');
+      dictionaryInfo.className = 'dictionary-info';
+      const dictPinyin = document.createElement('div');
+      dictPinyin.className = 'dict-pinyin';
+      const dictMeaning = document.createElement('div');
+      dictMeaning.className = 'dict-meaning';
+      dictionaryInfo.appendChild(dictPinyin);
+      dictionaryInfo.appendChild(dictMeaning);
+
       card.appendChild(charDisplay);
-      card.appendChild(pinyinEl);
-      card.appendChild(meaningEl);
       card.appendChild(writerContainer);
       card.appendChild(controls);
+      card.appendChild(dictionaryInfo);
 
       charsGrid.appendChild(card);
 
-      // Fetch character info
-      fetchCharInfo(character).then(info => {
-        pinyinEl.textContent = info.pinyin || '';
-        meaningEl.textContent = info.meaning || '';
-      });
+      // Lookup character in CC-CEDICT
+      const dictData = lookupChar(character);
+      if (dictData) {
+        const pinyinText = convertPinyin(dictData.pinyin);
+        pinyinEl.textContent = pinyinText;
+        meaningEl.textContent = dictData.definitions[0] || '';
+        dictPinyin.textContent = pinyinText;
+        dictMeaning.textContent = dictData.definitions.slice(0, 3).join('; ');
+      } else if (Object.keys(cedictData).length === 0) {
+        pinyinEl.textContent = 'Loading...';
+        dictPinyin.textContent = 'Dictionary loading...';
+        dictMeaning.textContent = '';
+      } else {
+        pinyinEl.textContent = '';
+        dictPinyin.textContent = 'No dictionary data';
+        dictMeaning.textContent = '';
+      }
 
       const writer = HanziWriter.create(writerContainer, character, {
         width: 200,
@@ -394,6 +471,9 @@
         generateCards();
       }
     });
+
+    // Load CC-CEDICT dictionary on page load
+    loadCedict();
   </script>
 </body>
 </html>
