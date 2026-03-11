@@ -80,6 +80,35 @@
       background: #357abd;
     }
 
+    .speak-btn {
+      padding: 8px;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .speak-btn:hover {
+      background: #218838;
+    }
+
+    .speak-btn svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+
+    #speakAllBtn {
+      width: 40px;
+      height: 40px;
+      padding: 10px;
+    }
+
     .chars-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -94,12 +123,28 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      position: relative;
     }
 
     .char-card .character {
       font-size: 32px;
       color: #333;
-      margin-bottom: 8px;
+      margin-bottom: 12px;
+    }
+
+    .char-card .speak-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 32px;
+      height: 32px;
+      padding: 6px;
+      flex-shrink: 0;
+    }
+
+    .char-card .speak-btn svg {
+      width: 18px;
+      height: 18px;
     }
 
     .char-card .pinyin {
@@ -202,8 +247,11 @@
         autocomplete="off"
       >
       <button id="generateBtn">Generate</button>
+      <button id="speakAllBtn" class="speak-btn" title="Speak all">
+        <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+      </button>
       <div class="speed-control">
-        <label for="speedSlider">Speed:</label>
+        <label for="speedSlider"> Drawing Speed:</label>
         <input type="range" id="speedSlider" min="0.5" max="3" step="0.5" value="1">
         <span id="speedValue">1x</span>
       </div>
@@ -227,6 +275,16 @@
     let currentSpeed = 1;
     let writers = [];
     let cedictData = {};
+
+    // Speak Chinese text using Web Speech API
+    function speakChinese(text) {
+      if (!text) return;
+      speechSynthesis.cancel();
+      const msg = new SpeechSynthesisUtterance(text);
+      msg.lang = "zh-CN";
+      msg.rate = 0.8;
+      speechSynthesis.speak(msg);
+    }
 
     // Convert pinyin with tone numbers to proper tone marks
     function convertPinyin(pinyin) {
@@ -377,6 +435,12 @@
       const card = document.createElement('div');
       card.className = 'char-card';
 
+      const speakBtn = document.createElement('button');
+      speakBtn.className = 'speak-btn';
+      speakBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>';
+      speakBtn.onclick = () => speakChinese(character);
+      speakBtn.title = 'Speak';
+
       const charDisplay = document.createElement('div');
       charDisplay.className = 'character';
       charDisplay.textContent = character;
@@ -438,6 +502,7 @@
       dictionaryInfo.appendChild(dictPinyin);
       dictionaryInfo.appendChild(dictMeaning);
 
+      card.appendChild(speakBtn);
       card.appendChild(charDisplay);
       card.appendChild(writerContainer);
       card.appendChild(controls);
@@ -510,6 +575,15 @@
     }
 
     generateBtn.addEventListener('click', generateCards);
+
+    const speakAllBtn = document.getElementById('speakAllBtn');
+    speakAllBtn.addEventListener('click', () => {
+      const input = charInput.value.trim();
+      const chineseChars = input.split('').filter(char => /[\u4e00-\u9fff]/.test(char));
+      if (chineseChars.length > 0) {
+        speakChinese(chineseChars.join(''));
+      }
+    });
 
     charInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
