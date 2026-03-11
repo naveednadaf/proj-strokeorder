@@ -230,6 +230,7 @@
 
     // Convert pinyin with tone numbers to proper tone marks
     function convertPinyin(pinyin) {
+      if (!pinyin) return '';
       const toneMarks = {
         'a': ['ā', 'á', 'ǎ', 'à'],
         'e': ['ē', 'é', 'ě', 'è'],
@@ -248,6 +249,53 @@
         }
         return match;
       }).replace(/([aeiouv])5/gi, '$1');
+    }
+    function convertPinyinWithEndNum(pinyin) {
+      if (!pinyin) return '';
+
+      const toneMarks = {
+        a: ['ā','á','ǎ','à'],
+        e: ['ē','é','ě','è'],
+        i: ['ī','í','ǐ','ì'],
+        o: ['ō','ó','ǒ','ò'],
+        u: ['ū','ú','ǔ','ù'],
+        ü: ['ǖ','ǘ','ǚ','ǜ'],
+        v: ['ǖ','ǘ','ǚ','ǜ']
+      };
+
+      const match = pinyin.match(/^([a-züv]+)([1-5])$/i);
+      if (!match) return pinyin;
+
+      let syllable = match[1];
+      const tone = parseInt(match[2]);
+
+      if (tone === 5) return syllable;
+
+      const vowel = syllable.match(/[aeiouvü]/i);
+      if (!vowel) return pinyin;
+
+      const v = vowel[0];
+      const marked = toneMarks[v.toLowerCase()][tone - 1];
+
+    return syllable.replace(v, marked);
+  }
+  
+    // Parse pinyin in brackets from definition text and convert it
+    function parseAndConvertPinyin(text) {
+      if (!text) return '';
+
+      // Match pinyin in brackets like [nin2] or [Ni3 hao3]
+      return text.replace(/\[([A-Za-züv0-9\s]+?)\]/g, (match, pinyinGroup) => {
+        const converted = pinyinGroup
+          .split(/\s+/)
+          .filter(p => p.length > 0)
+          .map(syllable => {
+            console.log("Converting "+syllable);
+            return convertPinyinWithEndNum(syllable);
+          })
+          .join(' ');
+        return `[${converted}]`;
+      });
     }
 
     // Parse CC-CEDICT dictionary
@@ -401,16 +449,13 @@
       const dictData = lookupChar(character);
       if (dictData) {
         const pinyinText = convertPinyin(dictData.pinyin);
-        pinyinEl.textContent = pinyinText;
-        meaningEl.textContent = dictData.definitions[0] || '';
+        const meaningText = parseAndConvertPinyin(dictData.definitions[0]) || '';
         dictPinyin.textContent = pinyinText;
-        dictMeaning.textContent = dictData.definitions.slice(0, 3).join('; ');
+        dictMeaning.textContent = dictData.definitions.slice(0, 3).map(d => parseAndConvertPinyin(d)).join('; ');
       } else if (Object.keys(cedictData).length === 0) {
-        pinyinEl.textContent = 'Loading...';
         dictPinyin.textContent = 'Dictionary loading...';
         dictMeaning.textContent = '';
       } else {
-        pinyinEl.textContent = '';
         dictPinyin.textContent = 'No dictionary data';
         dictMeaning.textContent = '';
       }
